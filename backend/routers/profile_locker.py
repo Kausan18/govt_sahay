@@ -56,7 +56,7 @@ def save_user_profile(req: ProfileRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 # 3. Get Profile
-@router.post("/get-profile")
+@router.get("/get-profile")
 def get_user_profile(user_id: str):
     try:
         profile = get_profile(user_id)
@@ -100,7 +100,16 @@ async def upload_document(
         raise HTTPException(status_code=500, detail=str(e))
 
 # 5. Get User's Documents
+'''
 @router.post("/get-documents")
+def get_user_documents(user_id: str):
+    try:
+        res = supabase.table("documents").select("*").eq("user_id", user_id).execute()
+        return {"documents": res.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+'''
+@router.get("/get-documents")
 def get_user_documents(user_id: str):
     try:
         res = supabase.table("documents").select("*").eq("user_id", user_id).execute()

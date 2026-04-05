@@ -212,19 +212,24 @@ else:
         </div>""", unsafe_allow_html=True)
 
     # AI explains why
-    if "verify_ai_explain" not in st.session_state:
-        with st.spinner("AI is explaining what went wrong..."):
-            try:
-                all_issues_text = ", ".join(missing + issues)
-                res = call("/ai/ask-scheme", {
-                    "scheme_id": st.session_state["verify_scheme_id"],
-                    "question": f"The user failed verification due to: {all_issues_text}. "
-                                f"Explain in simple language what they need to fix and how.",
-                    "language": "English"
-                })
-                st.session_state["verify_ai_explain"] = res.get("answer", "")
-            except:
-                st.session_state["verify_ai_explain"] = ""
+    # In 5_verification.py — replace the AI explain block
+if "verify_ai_explain" not in st.session_state:
+    with st.spinner("AI is explaining what went wrong..."):
+        try:
+            all_issues_text = ", ".join(missing + issues)
+            explain_lang = st.session_state.get("preferred_language", "English")
+            res = call("/ai/ask-scheme", {
+                "scheme_id": st.session_state["verify_scheme_id"],
+                "question": (
+                    f"The user's verification failed for these reasons: {all_issues_text}. "
+                    f"Explain in simple, friendly language what went wrong and exactly what "
+                    f"the user needs to do to fix it. Be specific and encouraging."
+                ),
+                "language": explain_lang
+            })
+            st.session_state["verify_ai_explain"] = res.get("answer", "")
+        except:
+            st.session_state["verify_ai_explain"] = ""
 
     if st.session_state.get("verify_ai_explain"):
         st.markdown(f"""

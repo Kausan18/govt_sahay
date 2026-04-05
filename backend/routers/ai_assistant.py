@@ -23,10 +23,21 @@ def ask_scheme(req: SchemeQueryRequest):
     answer = ask_about_scheme(scheme_res.data[0], req.question, req.language)
     return {"answer": answer}
 
+# In ai_assistant.py — add fallback if no ranked schemes
 @router.post("/situational")
 def situational(req: SituationalRequest):
     profile_res = supabase.table("profiles").select("*").eq("user_id", req.user_id).execute()
     profile = profile_res.data[0] if profile_res.data else {}
-    schemes = rank_schemes_for_user(req.user_id)
+    
+    try:
+        schemes = rank_schemes_for_user(req.user_id)
+    except Exception:
+        schemes = []
+    
+    if not schemes:
+        # Fetch all schemes without scoring as fallback
+        all_res = supabase.table("schemes").select("name,description,benefits,income_limit,occupations").limit(20).execute()
+        schemes = all_res.data if all_res.data else []
+    
     answer = situational_query(profile, req.situation, schemes)
     return {"answer": answer}
