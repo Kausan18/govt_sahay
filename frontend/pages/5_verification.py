@@ -1,134 +1,126 @@
 import streamlit as st
 from api_client import call
-import requests
-import os
+import requests, os
+from dotenv import load_dotenv
 
+load_dotenv()
 BASE = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 st.set_page_config(page_title="Verification — YojanaConnect", page_icon="✅", layout="centered")
-
-if "user_id" not in st.session_state:
-    st.switch_page("app.py")
-if "verify_scheme_id" not in st.session_state:
-    st.switch_page("pages/3_schemes.py")
+if "user_id" not in st.session_state: st.switch_page("app.py")
+if "verify_scheme_id" not in st.session_state: st.switch_page("pages/3_schemes.py")
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap');
+*, *::before, *::after { box-sizing:border-box; }
+[data-testid="stAppViewContainer"] { background:#FAFAF8; }
+[data-testid="stSidebar"], [data-testid="collapsedControl"] { display:none !important; }
+.stApp { background:#FAFAF8; }
 
-[data-testid="stAppViewContainer"] { background: #F7F4EF; }
-[data-testid="stSidebar"] { display: none; }
-[data-testid="collapsedControl"] { display: none; }
+.pg-wrap { padding:40px 0 20px; }
+.step-track { display:flex; gap:6px; margin-bottom:28px; max-width:320px; }
+.stp { height:4px; flex:1; border-radius:4px; background:#E8E8E3; }
+.stp.done { background:#138808; }
+.stp.now  { background:#FF9933; }
+.pg-title { font-family:'Playfair Display',serif; font-size:2rem; font-weight:700; color:#1C1C1A; margin-bottom:4px; }
+.pg-sub { font-family:'Plus Jakarta Sans',sans-serif; font-size:0.9rem; color:#8A8A84; margin-bottom:32px; }
 
-.step-bar { display: flex; gap: 6px; margin-bottom: 20px; }
-.step { height: 4px; flex: 1; border-radius: 2px; background: #E2E5EF; }
-.step.done { background: #138808; }
-.step.active { background: #FF9933; }
-
-.page-title { font-family: 'Noto Serif', serif; font-size: 1.9rem; font-weight: 600; color: #1A1F3C; margin-bottom: 6px; }
-.page-sub { font-family: 'DM Sans', sans-serif; font-size: 0.92rem; color: #8A90A2; margin-bottom: 32px; }
-
-.result-card {
-    border-radius: 16px; padding: 36px 40px; text-align: center; margin-bottom: 20px;
+/* result cards */
+.result-verified {
+    background:#F0FAF0; border:2px solid #138808; border-radius:20px;
+    padding:40px 36px; text-align:center; margin-bottom:20px;
 }
-.result-card.verified { background: #EDFBE9; border: 2px solid #138808; }
-.result-card.failed   { background: #FEF0F0; border: 2px solid #C0392B; }
-
-.result-icon { font-size: 3rem; margin-bottom: 12px; }
-.result-title {
-    font-family: 'Noto Serif', serif;
-    font-size: 1.5rem; font-weight: 600; margin-bottom: 8px;
+.result-failed {
+    background:#FFF4F4; border:2px solid #E74C3C; border-radius:20px;
+    padding:40px 36px; text-align:center; margin-bottom:20px;
 }
-.result-title.verified { color: #0B6E04; }
-.result-title.failed   { color: #922B21; }
-.result-sub { font-family: 'DM Sans', sans-serif; font-size: 0.9rem; line-height: 1.6; }
-.result-sub.verified { color: #1D8A14; }
-.result-sub.failed   { color: #C0392B; }
+.r-icon { font-size:3rem; margin-bottom:14px; }
+.r-title { font-family:'Playfair Display',serif; font-size:1.6rem; font-weight:700; margin-bottom:8px; }
+.r-title.ok  { color:#0B6E04; }
+.r-title.fail { color:#C0392B; }
+.r-sub { font-family:'Plus Jakarta Sans',sans-serif; font-size:0.9rem; line-height:1.65; }
+.r-sub.ok   { color:#1D8A14; }
+.r-sub.fail { color:#C0392B; }
 
-.doc-result-card {
-    background: #fff; border-radius: 12px; padding: 16px 20px;
-    margin-bottom: 10px; border: 1.5px solid #E2E5EF;
-    display: flex; justify-content: space-between; align-items: center;
-}
-.doc-result-name { font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: #1A1F3C; font-weight: 500; }
-.doc-result-issues { font-family: 'DM Sans', sans-serif; font-size: 0.8rem; color: #C0392B; margin-top: 4px; }
-.pass-badge { background: #EDFBE9; color: #138808; font-family: 'DM Sans', sans-serif;
-              font-size: 0.75rem; font-weight: 500; padding: 4px 12px; border-radius: 20px; }
-.fail-badge { background: #FEF0F0; color: #C0392B; font-family: 'DM Sans', sans-serif;
-              font-size: 0.75rem; font-weight: 500; padding: 4px 12px; border-radius: 20px; }
+/* doc check rows */
+.sec-label { font-family:'Plus Jakarta Sans',sans-serif; font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; color:#B0B0AA; margin:28px 0 14px; }
+.doc-check { background:#fff; border:1.5px solid #E8E8E3; border-radius:14px; padding:16px 20px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; }
+.dc-name { font-family:'Plus Jakarta Sans',sans-serif; font-size:0.9rem; font-weight:600; color:#1C1C1A; }
+.dc-issue { font-family:'Plus Jakarta Sans',sans-serif; font-size:0.78rem; color:#C0392B; margin-top:3px; }
+.badge-pass { background:#E8F7E8; color:#138808; font-family:'Plus Jakarta Sans',sans-serif; font-size:0.72rem; font-weight:600; padding:4px 12px; border-radius:20px; }
+.badge-fail { background:#FFF0F0; color:#C0392B; font-family:'Plus Jakarta Sans',sans-serif; font-size:0.72rem; font-weight:600; padding:4px 12px; border-radius:20px; }
 
-.section-title {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.75rem; font-weight: 500; color: #A0A6BA;
-    text-transform: uppercase; letter-spacing: 0.07em; margin: 24px 0 12px;
-}
-.next-step-card {
-    background: #1A1F3C; border-radius: 14px; padding: 24px 28px; margin-bottom: 12px;
-}
-.next-title { font-family: 'Noto Serif', serif; font-size: 1.05rem; color: #fff; margin-bottom: 6px; }
-.next-sub { font-family: 'DM Sans', sans-serif; font-size: 0.85rem; color: #A8ADCC; line-height: 1.55; }
+/* next step cards */
+.next-card { background:#1C1C1A; border-radius:16px; padding:26px 28px; margin-bottom:14px; }
+.next-title { font-family:'Playfair Display',serif; font-size:1.1rem; color:#fff; margin-bottom:6px; }
+.next-sub { font-family:'Plus Jakarta Sans',sans-serif; font-size:0.86rem; color:#9A9A94; line-height:1.6; }
 
+/* AI explanation */
+.ai-explain { background:#fff; border:1.5px solid #E8E8E3; border-radius:16px; padding:22px 24px; margin-bottom:14px; }
+.ai-explain-label { font-family:'Plus Jakarta Sans',sans-serif; font-size:0.68rem; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; color:#B0B0AA; margin-bottom:10px; }
+.ai-explain-text { font-family:'Plus Jakarta Sans',sans-serif; font-size:0.9rem; color:#2A2A28; line-height:1.7; }
+
+/* buttons */
 .stButton > button {
-    background: #1A1F3C !important; color: #fff !important;
-    font-family: 'DM Sans', sans-serif !important;
-    font-size: 0.92rem !important; font-weight: 500 !important;
-    border-radius: 10px !important; padding: 12px 24px !important; border: none !important;
+    font-family:'Plus Jakarta Sans',sans-serif !important; font-size:0.92rem !important;
+    font-weight:600 !important; border-radius:12px !important; padding:12px 24px !important;
+    border:none !important; background:#1C1C1A !important; color:#fff !important;
+    transition:all 0.18s !important;
 }
-.stButton > button:hover { background: #FF9933 !important; color: #1A1F3C !important; }
-.pdf-btn > button { background: #138808 !important; }
-.pdf-btn > button:hover { background: #0e6006 !important; }
+.stButton > button:hover { background:#138808 !important; transform:translateY(-1px) !important; box-shadow:0 6px 20px rgba(19,136,8,0.25) !important; }
+.pdf-btn > button { background:#138808 !important; }
+.pdf-btn > button:hover { background:#0e6b07 !important; }
+.stAlert { border-radius:12px !important; font-family:'Plus Jakarta Sans',sans-serif !important; }
 </style>
+""", unsafe_allow_html=True)
 
-<div style="padding: 28px 0 8px">
-    <div class="step-bar">
-        <div class="step done"></div>
-        <div class="step done"></div>
-        <div class="step done"></div>
-        <div class="step active"></div>
+st.markdown("""
+<div class="pg-wrap">
+    <div class="step-track">
+        <div class="stp done"></div><div class="stp done"></div>
+        <div class="stp done"></div><div class="stp now"></div>
     </div>
-    <div class="page-title">Verification result</div>
-    <div class="page-sub">We matched your documents against your profile and scheme requirements.</div>
+    <div class="pg-title">Verification result</div>
+    <div class="pg-sub">We matched your documents against your profile and scheme requirements.</div>
 </div>
 """, unsafe_allow_html=True)
 
-# Run verification (only once per session per scheme)
-verify_key = f"verify_result_{st.session_state['verify_scheme_id']}"
-
-if verify_key not in st.session_state:
-    with st.spinner("Running document verification... This may take a moment."):
+vkey = f"vres_{st.session_state['verify_scheme_id']}"
+if vkey not in st.session_state:
+    with st.spinner("Running document verification… This may take a moment."):
         try:
             result = call("/verify/run", {
                 "user_id": st.session_state["user_id"],
                 "scheme_id": st.session_state["verify_scheme_id"]
             })
-            st.session_state[verify_key] = result
+            st.session_state[vkey] = result
         except Exception as e:
             st.error(f"Verification failed: {e}")
             st.stop()
 
-result = st.session_state[verify_key]
+result = st.session_state[vkey]
 verified = result.get("verified", False)
 missing = result.get("missing_docs", [])
 issues = result.get("issues", [])
 doc_results = result.get("doc_results", {})
 
-# Main result card
+# Result card
 if verified:
     st.markdown("""
-    <div class="result-card verified">
-        <div class="result-icon">✅</div>
-        <div class="result-title verified">You're verified!</div>
-        <div class="result-sub verified">All your documents match your profile. You're eligible to apply for this scheme.</div>
+    <div class="result-verified">
+        <div class="r-icon">✅</div>
+        <div class="r-title ok">You're verified!</div>
+        <div class="r-sub ok">All documents match your profile. You are eligible to apply for this scheme.</div>
     </div>""", unsafe_allow_html=True)
 else:
-    all_reasons = missing + issues
-    reasons_html = "".join([f"<li>{r}</li>" for r in all_reasons])
+    reasons_html = "".join([f"<li style='margin-bottom:6px'>{r}</li>" for r in missing + issues])
     st.markdown(f"""
-    <div class="result-card failed">
-        <div class="result-icon">⚠️</div>
-        <div class="result-title failed">Verification incomplete</div>
-        <div class="result-sub failed">
-            <ul style="text-align:left;margin-top:10px;padding-left:20px">
+    <div class="result-failed">
+        <div class="r-icon">⚠️</div>
+        <div class="r-title fail">Verification incomplete</div>
+        <div class="r-sub fail">
+            <ul style="text-align:left;margin-top:12px;padding-left:20px;line-height:1.8">
                 {reasons_html}
             </ul>
         </div>
@@ -136,52 +128,46 @@ else:
 
 # Document breakdown
 if doc_results:
-    st.markdown('<div class="section-title">Document check breakdown</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sec-label">Document check breakdown</div>', unsafe_allow_html=True)
     for doc_type, res in doc_results.items():
         passed = res.get("passed", False)
         doc_issues = res.get("issues", [])
-        badge = '<span class="pass-badge">✓ Passed</span>' if passed else '<span class="fail-badge">✗ Failed</span>'
-        issues_html = ""
-        if doc_issues:
-            issues_html = f'<div class="doc-result-issues">{"<br>".join(doc_issues)}</div>'
+        issues_html = "".join([f'<div class="dc-issue">{i}</div>' for i in doc_issues])
+        badge = '<span class="badge-pass">✓ Passed</span>' if passed else '<span class="badge-fail">✗ Failed</span>'
         st.markdown(f"""
-        <div class="doc-result-card">
+        <div class="doc-check">
             <div>
-                <div class="doc-result-name">{doc_type.replace('_',' ').title()}</div>
+                <div class="dc-name">{doc_type.replace('_',' ').title()}</div>
                 {issues_html}
             </div>
             {badge}
         </div>""", unsafe_allow_html=True)
 
 if missing:
-    st.markdown('<div class="section-title">Missing documents</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sec-label">Missing documents</div>', unsafe_allow_html=True)
     for doc in missing:
         st.markdown(f"""
-        <div class="doc-result-card">
-            <div class="doc-result-name">{doc.replace('_',' ').title()}</div>
-            <span class="fail-badge">Not uploaded</span>
+        <div class="doc-check">
+            <div class="dc-name">{doc.replace('_',' ').title()}</div>
+            <span class="badge-fail">Not uploaded</span>
         </div>""", unsafe_allow_html=True)
 
 # Next steps
-st.markdown('<div class="section-title">Next steps</div>', unsafe_allow_html=True)
-
+st.markdown('<div class="sec-label">Next steps</div>', unsafe_allow_html=True)
 scheme = st.session_state.get("selected_scheme", {})
 
 if verified:
+    portal_link = f'<br><br><a href="{scheme["official_url"]}" target="_blank" style="color:#FF9933;font-weight:600">Visit official portal ↗</a>' if scheme.get("official_url") else ""
     st.markdown(f"""
-    <div class="next-step-card">
+    <div class="next-card">
         <div class="next-title">Apply on the official portal</div>
-        <div class="next-sub">
-            Visit the government website with your documents ready.
-            Your details have been pre-verified — the application process should be straightforward.
-            {f'<br><br><a href="{scheme["official_url"]}" target="_blank" style="color:#FF9933">Official portal ↗</a>' if scheme.get("official_url") else ""}
-        </div>
+        <div class="next-sub">Your documents are verified. Head to the government portal with your documents ready.{portal_link}</div>
     </div>""", unsafe_allow_html=True)
 
-    # PDF download
-    st.markdown('<div class="section-title">Download application guide</div>', unsafe_allow_html=True)
-    if st.button("📄 Download step-by-step application PDF", use_container_width=True):
-        with st.spinner("Generating PDF..."):
+    st.markdown('<div class="sec-label">Application guide</div>', unsafe_allow_html=True)
+    st.markdown('<div class="pdf-btn">', unsafe_allow_html=True)
+    if st.button("📄  Download step-by-step PDF guide", use_container_width=True):
+        with st.spinner("Generating PDF…"):
             try:
                 pdf_res = requests.get(
                     f"{BASE}/api/verify/generate-pdf/{st.session_state['user_id']}/{st.session_state['verify_scheme_id']}",
@@ -189,7 +175,7 @@ if verified:
                 )
                 if pdf_res.ok:
                     st.download_button(
-                        label="⬇ Save PDF to device",
+                        label="⬇  Save PDF to device",
                         data=pdf_res.content,
                         file_name=f"apply_{scheme.get('name','scheme').replace(' ','_')}.pdf",
                         mime="application/pdf",
@@ -199,57 +185,40 @@ if verified:
                     st.error("Could not generate PDF.")
             except Exception as e:
                 st.error(f"PDF error: {e}")
+    st.markdown('</div>', unsafe_allow_html=True)
+
 else:
-    # AI explanation of failure
-    if issues or missing:
-        st.markdown("""
-        <div class="next-step-card">
-            <div class="next-title">What to do next</div>
-            <div class="next-sub">
-                Fix the issues above, then re-verify. You can upload missing documents
-                from the scheme detail page and run verification again.
-            </div>
-        </div>""", unsafe_allow_html=True)
+    st.markdown("""
+    <div class="next-card">
+        <div class="next-title">How to fix this</div>
+        <div class="next-sub">Resolve the issues listed above, then re-verify. You can upload missing documents from the scheme detail page.</div>
+    </div>""", unsafe_allow_html=True)
 
-    # AI explains why
-    # In 5_verification.py — replace the AI explain block
-if "verify_ai_explain" not in st.session_state:
-    with st.spinner("AI is explaining what went wrong..."):
-        try:
-            all_issues_text = ", ".join(missing + issues)
-            explain_lang = st.session_state.get("preferred_language", "English")
-            res = call("/ai/ask-scheme", {
-                "scheme_id": st.session_state["verify_scheme_id"],
-                "question": (
-                    f"The user's verification failed for these reasons: {all_issues_text}. "
-                    f"Explain in simple, friendly language what went wrong and exactly what "
-                    f"the user needs to do to fix it. Be specific and encouraging."
-                ),
-                "language": explain_lang
-            })
-            st.session_state["verify_ai_explain"] = res.get("answer", "")
-        except:
-            st.session_state["verify_ai_explain"] = ""
+    if "vai_explain" not in st.session_state:
+        with st.spinner("AI is explaining what went wrong…"):
+            try:
+                r = call("/ai/ask-scheme", {
+                    "scheme_id": st.session_state["verify_scheme_id"],
+                    "question": (f"Verification failed for these reasons: {', '.join(missing+issues)}. "
+                                 f"Explain clearly in simple language what the user needs to fix and the exact steps."),
+                    "language": "English"
+                })
+                st.session_state["vai_explain"] = r.get("answer", "")
+            except:
+                st.session_state["vai_explain"] = ""
 
-    if st.session_state.get("verify_ai_explain"):
+    if st.session_state.get("vai_explain"):
         st.markdown(f"""
-        <div style="background:#fff;border-radius:12px;padding:18px 22px;
-             border:1.5px solid #E2E5EF;margin-bottom:14px">
-            <div style="font-family:DM Sans,sans-serif;font-size:0.75rem;font-weight:500;
-                 color:#A0A6BA;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px">
-                AI guidance
-            </div>
-            <div style="font-family:DM Sans,sans-serif;font-size:0.9rem;color:#2A3050;line-height:1.65">
-                {st.session_state["verify_ai_explain"]}
-            </div>
+        <div class="ai-explain">
+            <div class="ai-explain-label">AI Guidance</div>
+            <div class="ai-explain-text">{st.session_state['vai_explain']}</div>
         </div>""", unsafe_allow_html=True)
 
-# Navigation
 st.markdown("<br>", unsafe_allow_html=True)
-col1, col2 = st.columns(2)
-with col1:
+c1, c2 = st.columns(2)
+with c1:
     if st.button("← Back to scheme", use_container_width=True):
         st.switch_page("pages/4_scheme_detail.py")
-with col2:
+with c2:
     if st.button("Browse other schemes →", use_container_width=True):
         st.switch_page("pages/3_schemes.py")
