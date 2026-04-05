@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+streamlit
+streamlit-chat
+supabase
+python-dotenv
+pydantic
+requests
+loguru
+pytesseract
+Pillow
+fuzzywuzzy
+python-Levenshtein
+reportlab
+easyocr
