@@ -1,125 +1,100 @@
 import streamlit as st
 from api_client import call
-import requests
-import os
+import requests, os
+from dotenv import load_dotenv
 
+load_dotenv()
 BASE = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 st.set_page_config(page_title="Scheme Detail — YojanaConnect", page_icon="📄", layout="wide")
-
-if "user_id" not in st.session_state:
-    st.switch_page("app.py")
-if "selected_scheme_id" not in st.session_state:
-    st.switch_page("pages/3_schemes.py")
+if "user_id" not in st.session_state: st.switch_page("app.py")
+if "selected_scheme_id" not in st.session_state: st.switch_page("pages/3_schemes.py")
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap');
+*, *::before, *::after { box-sizing:border-box; }
+[data-testid="stAppViewContainer"] { background:#FAFAF8; }
+[data-testid="stSidebar"], [data-testid="collapsedControl"] { display:none !important; }
+.stApp { background:#FAFAF8; }
 
-[data-testid="stAppViewContainer"] { background: #F7F4EF; }
-[data-testid="stSidebar"] { display: none; }
-[data-testid="collapsedControl"] { display: none; }
+/* hero */
+.hero-card {
+    background:#1C1C1A; border-radius:20px; padding:36px 40px; margin-bottom:18px; position:relative; overflow:hidden;
+}
+.hero-card::before {
+    content:''; position:absolute; top:-60px; right:-60px;
+    width:240px; height:240px; border-radius:50%;
+    background:rgba(255,153,51,0.07);
+}
+.hero-badge { font-family:'Plus Jakarta Sans',sans-serif; font-size:0.68rem; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; color:#FF9933; margin-bottom:10px; }
+.hero-title { font-family:'Playfair Display',serif; font-size:1.8rem; font-weight:700; color:#fff; margin-bottom:10px; line-height:1.2; }
+.hero-desc { font-family:'Plus Jakarta Sans',sans-serif; font-size:0.92rem; color:#9A9A94; line-height:1.65; }
 
-.back-link {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.85rem; color: #8A90A2;
-    text-decoration: none; margin-bottom: 20px; display: inline-block;
-    cursor: pointer;
-}
-.scheme-hero {
-    background: #1A1F3C;
-    border-radius: 16px;
-    padding: 32px 36px;
-    margin-bottom: 20px;
-    position: relative;
-    overflow: hidden;
-}
-.scheme-hero::before {
-    content: '';
-    position: absolute; top: -40px; right: -40px;
-    width: 200px; height: 200px;
-    border-radius: 50%;
-    background: rgba(255,153,51,0.08);
-}
-.hero-label {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.72rem; font-weight: 500; color: #FF9933;
-    text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;
-}
-.hero-title {
-    font-family: 'Noto Serif', serif;
-    font-size: 1.6rem; font-weight: 600; color: #fff; margin-bottom: 10px;
-}
-.hero-desc { font-family: 'DM Sans', sans-serif; font-size: 0.92rem; color: #A8ADCC; line-height: 1.6; }
+/* info cards */
+.info-card { background:#fff; border:1.5px solid #E8E8E3; border-radius:16px; padding:24px 26px; margin-bottom:14px; }
+.ic-title { font-family:'Plus Jakarta Sans',sans-serif; font-size:0.68rem; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; color:#B0B0AA; margin-bottom:16px; }
 
-.info-card {
-    background: #fff; border-radius: 14px; padding: 22px 24px;
-    border: 1.5px solid #E2E5EF; margin-bottom: 14px;
-}
-.info-card-title {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.72rem; font-weight: 500; color: #A0A6BA;
-    text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 14px;
-}
-.benefit-row {
-    display: flex; align-items: flex-start; gap: 10px;
-    margin-bottom: 10px;
-    font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: #2A3050;
-}
-.benefit-dot { width: 6px; height: 6px; border-radius: 50%; background: #138808; margin-top: 7px; flex-shrink: 0; }
-.doc-pill {
-    display: inline-block;
-    background: #FFF4E8; color: #C47B10;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.78rem; font-weight: 500;
-    padding: 5px 12px; border-radius: 20px; margin: 3px 3px 3px 0;
-}
-.doc-pill.have { background: #EDFBE9; color: #138808; }
-.doc-pill.missing { background: #FEF0F0; color: #C0392B; }
+/* benefit row */
+.ben-row { display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; font-family:'Plus Jakarta Sans',sans-serif; font-size:0.9rem; color:#2A2A28; line-height:1.55; }
+.ben-dot { width:7px; height:7px; border-radius:50%; background:#138808; flex-shrink:0; margin-top:6px; }
 
-.ai-chat-panel {
-    background: #1A1F3C; border-radius: 16px; padding: 24px 22px;
-    position: sticky; top: 20px;
+/* doc pills */
+.pill { display:inline-block; font-family:'Plus Jakarta Sans',sans-serif; font-size:0.76rem; font-weight:600; padding:5px 13px; border-radius:20px; margin:3px 3px 3px 0; }
+.pill-have    { background:#E8F7E8; color:#138808; }
+.pill-missing { background:#FFF0F0; color:#C0392B; }
+
+/* AI chat */
+.chat-panel { background:#1C1C1A; border-radius:20px; padding:26px 24px; position:sticky; top:20px; }
+.chat-head { font-family:'Playfair Display',serif; font-size:1.1rem; color:#fff; margin-bottom:4px; }
+.chat-sub { font-family:'Plus Jakarta Sans',sans-serif; font-size:0.8rem; color:#7A7A74; margin-bottom:18px; line-height:1.55; }
+.chat-user { background:#FF9933; color:#1C1C1A; border-radius:12px 12px 4px 12px; padding:11px 14px; margin-bottom:8px; font-family:'Plus Jakarta Sans',sans-serif; font-size:0.84rem; line-height:1.5; }
+.chat-ai   { background:#2A2A28; color:#D0D0CA; border-radius:12px 12px 12px 4px; padding:11px 14px; margin-bottom:8px; font-family:'Plus Jakarta Sans',sans-serif; font-size:0.84rem; line-height:1.6; }
+.chat-sender { font-family:'Plus Jakarta Sans',sans-serif; font-size:0.68rem; font-weight:600; opacity:0.55; margin-bottom:3px; }
+
+/* inputs */
+div[data-testid="stTextInput"] input {
+    font-family:'Plus Jakarta Sans',sans-serif !important; font-size:0.9rem !important;
+    color:#fff !important; background:#2A2A28 !important;
+    border:1.5px solid #3A3A38 !important; border-radius:12px !important; padding:12px 16px !important;
 }
-.chat-title { font-family: 'Noto Serif', serif; font-size: 1.05rem; color: #fff; margin-bottom: 4px; }
-.chat-sub { font-family: 'DM Sans', sans-serif; font-size: 0.8rem; color: #8A90A2; margin-bottom: 16px; }
-.chat-msg-user {
-    background: #FF9933; color: #1A1F3C; border-radius: 10px;
-    padding: 10px 14px; margin-bottom: 8px;
-    font-family: 'DM Sans', sans-serif; font-size: 0.85rem; line-height: 1.5;
+div[data-testid="stTextInput"] input::placeholder { color:#5A5A55 !important; }
+div[data-testid="stTextInput"] input:focus { border-color:#FF9933 !important; box-shadow:none !important; }
+div[data-testid="stSelectbox"] > div > div {
+    font-family:'Plus Jakarta Sans',sans-serif !important; font-size:0.88rem !important;
+    color:#fff !important; background:#2A2A28 !important;
+    border:1.5px solid #3A3A38 !important; border-radius:12px !important;
 }
-.chat-msg-ai {
-    background: #262C50; color: #C8CCE0; border-radius: 10px;
-    padding: 10px 14px; margin-bottom: 8px;
-    font-family: 'DM Sans', sans-serif; font-size: 0.85rem; line-height: 1.6;
-}
+div[data-testid="stSelectbox"] label { font-family:'Plus Jakarta Sans',sans-serif !important; font-size:0.8rem !important; color:#7A7A74 !important; }
+div[data-testid="stTextInput"] label { color:#7A7A74 !important; font-family:'Plus Jakarta Sans',sans-serif !important; font-size:0.8rem !important; }
+
+/* buttons */
 .stButton > button {
-    background: #FF9933 !important; color: #1A1F3C !important;
-    font-family: 'DM Sans', sans-serif !important;
-    font-size: 0.88rem !important; font-weight: 500 !important;
-    border-radius: 10px !important; padding: 10px 20px !important; border: none !important;
+    font-family:'Plus Jakarta Sans',sans-serif !important; font-size:0.9rem !important;
+    font-weight:600 !important; border-radius:10px !important; padding:11px 20px !important;
+    border:none !important; background:#FF9933 !important; color:#1C1C1A !important;
+    transition:all 0.18s !important;
 }
-.stButton > button:hover { background: #fff !important; }
-.verify-btn > button {
-    background: #138808 !important; color: #fff !important;
-    padding: 13px 24px !important; font-size: 0.95rem !important;
-}
-.verify-btn > button:hover { background: #0e6006 !important; }
-.stTextInput input {
-    background: #262C50 !important; color: #fff !important;
-    border: 1.5px solid #3A4070 !important; border-radius: 10px !important;
-    font-family: 'DM Sans', sans-serif !important;
-}
-.stSelectbox > div { background: #262C50 !important; color: #fff !important; }
-label { font-family: 'DM Sans', sans-serif !important; font-size: 0.82rem !important; color: #8A90A2 !important; }
+.stButton > button:hover { background:#fff !important; transform:translateY(-1px) !important; }
+
+.verify-btn > button { background:#138808 !important; color:#fff !important; font-size:0.95rem !important; padding:13px 24px !important; }
+.verify-btn > button:hover { background:#0e6b07 !important; }
+.back-btn > button { background:#2A2A28 !important; color:#D0D0CA !important; font-size:0.84rem !important; }
+.back-btn > button:hover { background:#3A3A38 !important; color:#fff !important; }
+
+[data-testid="stFileUploader"] { border:1.5px dashed #3A3A38 !important; border-radius:12px !important; background:#2A2A28 !important; }
+[data-testid="stFileUploader"] label { color:#9A9A94 !important; font-family:'Plus Jakarta Sans',sans-serif !important; }
+.stAlert { border-radius:12px !important; font-family:'Plus Jakarta Sans',sans-serif !important; }
+.stExpander { border:1.5px solid #E8E8E3 !important; border-radius:14px !important; }
 </style>
 """, unsafe_allow_html=True)
 
 # Back button
+st.markdown('<div class="back-btn">', unsafe_allow_html=True)
 if st.button("← Back to schemes"):
     st.switch_page("pages/3_schemes.py")
+st.markdown('</div>', unsafe_allow_html=True)
 
-# Load scheme
 scheme = st.session_state.get("selected_scheme")
 if not scheme:
     try:
@@ -129,194 +104,145 @@ if not scheme:
         st.error("Could not load scheme details.")
         st.stop()
 
-# Load user's uploaded docs
-uploaded_doc_types = set()
+# Fetch uploaded docs
+uploaded_types = set()
 try:
-    res = requests.get(f"{BASE}/api/locker/get-documents",
-                       params={"user_id": st.session_state["user_id"]}, timeout=10)
-    if res.ok:
-        uploaded_doc_types = {d["doc_type"] for d in res.json().get("documents", [])}
+    r = requests.get(f"{BASE}/api/locker/get-documents",
+                     params={"user_id": st.session_state["user_id"]}, timeout=10)
+    if r.ok:
+        uploaded_types = {d["doc_type"] for d in r.json().get("documents", [])}
 except:
     pass
 
 required_docs = scheme.get("required_docs", [])
-missing_docs = [d for d in required_docs if d not in uploaded_doc_types]
-has_all_docs = len(missing_docs) == 0
+missing_docs = [d for d in required_docs if d not in uploaded_types]
+has_all = len(missing_docs) == 0
 
-# Main layout
 col_info, col_chat = st.columns([1.8, 1], gap="large")
 
 with col_info:
     # Hero
     st.markdown(f"""
-    <div class="scheme-hero">
-        <div class="hero-label">Government Scheme</div>
+    <div class="hero-card">
+        <div class="hero-badge">Government Scheme</div>
         <div class="hero-title">{scheme.get('name','')}</div>
         <div class="hero-desc">{scheme.get('description','')}</div>
     </div>""", unsafe_allow_html=True)
 
     # Benefits
-    benefits_text = scheme.get("benefits", "")
-    if benefits_text:
-        st.markdown('<div class="info-card"><div class="info-card-title">What you get</div>', unsafe_allow_html=True)
-        for line in benefits_text.split("\n"):
+    benefits = scheme.get("benefits", "")
+    if benefits:
+        st.markdown('<div class="info-card"><div class="ic-title">What you get</div>', unsafe_allow_html=True)
+        for line in benefits.split("\n"):
             if line.strip():
-                st.markdown(f"""<div class="benefit-row">
-                    <div class="benefit-dot"></div>
-                    <div>{line.strip()}</div>
-                </div>""", unsafe_allow_html=True)
+                st.markdown(f'<div class="ben-row"><div class="ben-dot"></div><div>{line.strip()}</div></div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # Eligibility summary
-    st.markdown('<div class="info-card"><div class="info-card-title">Eligibility criteria</div>', unsafe_allow_html=True)
-    elig_items = []
+    # Eligibility
+    st.markdown('<div class="info-card"><div class="ic-title">Eligibility</div>', unsafe_allow_html=True)
+    elig = []
     if scheme.get("min_age") or scheme.get("max_age"):
-        elig_items.append(f"Age: {scheme.get('min_age','any')} – {scheme.get('max_age','any')} years")
+        elig.append(f"Age: {scheme.get('min_age','any')} – {scheme.get('max_age','any')} years")
     if scheme.get("income_limit"):
-        elig_items.append(f"Annual income below ₹{scheme['income_limit']:,}")
-    if scheme.get("castes") and "all" not in scheme.get("castes", []):
-        elig_items.append(f"Caste: {', '.join(scheme['castes'])}")
-    if scheme.get("states") and "all" not in scheme.get("states", []):
-        elig_items.append(f"State: {', '.join(scheme['states'])}")
-    for item in elig_items:
-        st.markdown(f"""<div class="benefit-row">
-            <div class="benefit-dot"></div><div>{item}</div>
-        </div>""", unsafe_allow_html=True)
+        elig.append(f"Annual income below ₹{scheme['income_limit']:,}")
+    if scheme.get("castes") and "all" not in scheme.get("castes",[]):
+        elig.append(f"Caste: {', '.join(scheme['castes'])}")
+    if scheme.get("states") and "all" not in scheme.get("states",[]):
+        elig.append(f"State: {', '.join(scheme['states'])}")
+    for item in elig:
+        st.markdown(f'<div class="ben-row"><div class="ben-dot"></div><div>{item}</div></div>', unsafe_allow_html=True)
+    if not elig:
+        st.markdown('<div class="ben-row"><div class="ben-dot"></div><div>Open to all eligible citizens</div></div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Documents status
-    st.markdown('<div class="info-card"><div class="info-card-title">Required documents</div>', unsafe_allow_html=True)
+    # Documents
+    st.markdown('<div class="info-card"><div class="ic-title">Required documents</div>', unsafe_allow_html=True)
     for doc in required_docs:
-        if doc in uploaded_doc_types:
-            st.markdown(f'<span class="doc-pill have">✓ {doc.replace("_"," ").title()}</span>', unsafe_allow_html=True)
+        if doc in uploaded_types:
+            st.markdown(f'<span class="pill pill-have">✓ {doc.replace("_"," ").title()}</span>', unsafe_allow_html=True)
         else:
-            st.markdown(f'<span class="doc-pill missing">✗ {doc.replace("_"," ").title()} — missing</span>', unsafe_allow_html=True)
+            st.markdown(f'<span class="pill pill-missing">✗ {doc.replace("_"," ").title()} — missing</span>', unsafe_allow_html=True)
 
     if missing_docs:
         st.markdown("<br>", unsafe_allow_html=True)
         st.warning(f"You're missing {len(missing_docs)} document(s). Upload them below to apply.")
-
-        # Inline upload for missing docs
         with st.expander("Upload missing documents"):
             for doc_type in missing_docs:
-                file = st.file_uploader(f"{doc_type.replace('_',' ').title()}",
-                                        type=["pdf","jpg","jpeg","png"], key=f"missing_{doc_type}")
-                if file:
-                    if st.button(f"Upload {doc_type}", key=f"up_{doc_type}"):
-                        try:
-                            res = requests.post(
-                                f"{BASE}/api/locker/upload-document",
-                                data={"user_id": st.session_state["user_id"], "doc_type": doc_type},
-                                files={"file": (file.name, file.getvalue(), file.type)}, timeout=30
-                            )
-                            if res.ok:
-                                st.success(f"{doc_type} uploaded!")
-                                st.rerun()
-                            else:
-                                st.error("Upload failed.")
-                        except Exception as e:
-                            st.error(str(e))
+                f = st.file_uploader(doc_type.replace("_"," ").title(), type=["pdf","jpg","jpeg","png"], key=f"miss_{doc_type}")
+                if f and st.button(f"Upload {doc_type}", key=f"upbtn_{doc_type}"):
+                    try:
+                        r = requests.post(f"{BASE}/api/locker/upload-document",
+                                          data={"user_id":st.session_state["user_id"],"doc_type":doc_type},
+                                          files={"file":(f.name,f.getvalue(),f.type)}, timeout=30)
+                        if r.ok: st.success(f"{doc_type} uploaded!"); st.rerun()
+                        else: st.error("Upload failed.")
+                    except Exception as e: st.error(str(e))
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # CTA buttons
+    # CTAs
     st.markdown("<br>", unsafe_allow_html=True)
-    if has_all_docs:
-        st.markdown('<div class="verify-btn">', unsafe_allow_html=True)
-        if st.button("Verify & apply for this scheme →", use_container_width=True):
-            st.session_state["verify_scheme_id"] = scheme["id"]
-            st.switch_page("pages/5_verification.py")
-        st.markdown('</div>', unsafe_allow_html=True)
-    else:
-        if st.button("Verify with available documents →", use_container_width=True):
-            st.session_state["verify_scheme_id"] = scheme["id"]
-            st.switch_page("pages/5_verification.py")
+    st.markdown('<div class="verify-btn">', unsafe_allow_html=True)
+    btn_label = "Verify & apply →" if has_all else "Verify with available documents →"
+    if st.button(btn_label, use_container_width=True):
+        st.session_state["verify_scheme_id"] = scheme["id"]
+        st.switch_page("pages/5_verification.py")
+    st.markdown('</div>', unsafe_allow_html=True)
 
     if scheme.get("official_url"):
         st.markdown(f"""
         <a href="{scheme['official_url']}" target="_blank"
-           style="display:inline-block;margin-top:10px;
-           font-family:DM Sans,sans-serif;font-size:0.87rem;color:#1A1F3C;
-           text-decoration:underline">
+           style="display:inline-block;margin-top:12px;font-family:'Plus Jakarta Sans',sans-serif;
+           font-size:0.87rem;color:#138808;text-decoration:none;font-weight:500">
            Visit official government portal ↗
         </a>""", unsafe_allow_html=True)
 
 with col_chat:
     st.markdown("""
-    <div class="ai-chat-panel">
-        <div class="chat-title">Ask about this scheme</div>
-        <div class="chat-sub">Questions answered in your language. Try Hindi, Kannada, Tamil, etc.</div>
+    <div class="chat-panel">
+        <div class="chat-head">Ask about this scheme</div>
+        <div class="chat-sub">Get answers in your language — Hindi, Kannada, Tamil, and more.</div>
     </div>""", unsafe_allow_html=True)
 
-    # Language selector & chat
-    lang_key = f"chat_lang_{scheme['id']}"
-    hist_key = f"chat_hist_{scheme['id']}"
+    lang_key = f"lang_{scheme['id']}"
+    hist_key = f"hist_{scheme['id']}"
+    if lang_key not in st.session_state: st.session_state[lang_key] = "English"
+    if hist_key not in st.session_state: st.session_state[hist_key] = []
 
-    if lang_key not in st.session_state:
-        st.session_state[lang_key] = "English"
-    if hist_key not in st.session_state:
-        st.session_state[hist_key] = []
+    lang = st.selectbox("Reply language",
+                        ["English","Hindi","Kannada","Tamil","Telugu","Bengali","Marathi","Gujarati","Punjabi","Malayalam","Odia"],
+                        key=lang_key)
 
-    with st.container():
-        lang = st.selectbox("Reply language", 
-                            ["English", "Hindi", "Kannada", "Tamil", "Telugu", "Bengali", "Marathi",
-                             "Gujarati", "Punjabi", "Malayalam", "Odia"],
-                            key=lang_key, label_visibility="visible")
+    for msg in st.session_state[hist_key][-8:]:
+        if msg["role"] == "user":
+            st.markdown(f'<div class="chat-sender" style="color:#FF9933">You</div><div class="chat-user">{msg["content"]}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div class="chat-sender" style="color:#6A6A64">AI</div><div class="chat-ai">{msg["content"]}</div>', unsafe_allow_html=True)
 
-        # Chat history
-        for msg in st.session_state[hist_key][-8:]:
-            cls = "chat-msg-user" if msg["role"] == "user" else "chat-msg-ai"
-            sender = "You" if msg["role"] == "user" else "AI"
-            st.markdown(f"""
-            <div class="{cls}">
-                <span style="font-size:0.7rem;opacity:0.6;font-weight:500">{sender}</span><br>
-                {msg['content']}
-            </div>""", unsafe_allow_html=True)
-
-        # Suggested questions
-        if not st.session_state[hist_key]:
-            suggestions = [
-                "How do I apply for this scheme?",
-                "What documents will I need?",
-                "How long does approval take?",
-            ]
-            for s in suggestions:
-                if st.button(s, key=f"sugg_{s}_{scheme['id']}", use_container_width=True):
-                    st.session_state[hist_key].append({"role":"user","content":s})
-                    with st.spinner("..."):
-                        try:
-                            res = call("/ai/ask-scheme", {
-                                "scheme_id": scheme["id"],
-                                "question": s,
-                                "language": st.session_state[lang_key]
-                            })
-                            st.session_state[hist_key].append(
-                                {"role":"assistant","content":res.get("answer","")}
-                            )
-                        except Exception as e:
-                            st.session_state[hist_key].append({"role":"assistant","content":str(e)})
-                    st.rerun()
-
-        user_q = st.text_input("Type your question...", key=f"q_{scheme['id']}",
-                               label_visibility="collapsed", placeholder="e.g. मुझे इस योजना के बारे में बताएं")
-
-        if st.button("Send →", key=f"send_{scheme['id']}", use_container_width=True):
-            if user_q.strip():
-                st.session_state[hist_key].append({"role":"user","content":user_q})
-                with st.spinner("Answering..."):
+    if not st.session_state[hist_key]:
+        for s in ["How do I apply?","What documents do I need?","How long does approval take?"]:
+            if st.button(s, key=f"sug_{s}_{scheme['id']}", use_container_width=True):
+                st.session_state[hist_key].append({"role":"user","content":s})
+                with st.spinner("…"):
                     try:
-                        res = call("/ai/ask-scheme", {
-                            "scheme_id": scheme["id"],
-                            "question": user_q,
-                            "language": st.session_state[lang_key]
-                        })
-                        st.session_state[hist_key].append(
-                            {"role":"assistant","content":res.get("answer","")}
-                        )
+                        r = call("/ai/ask-scheme", {"scheme_id":scheme["id"],"question":s,"language":st.session_state[lang_key]})
+                        st.session_state[hist_key].append({"role":"assistant","content":r.get("answer","")})
                     except Exception as e:
                         st.session_state[hist_key].append({"role":"assistant","content":str(e)})
                 st.rerun()
 
-        if st.session_state[hist_key]:
-            if st.button("Clear chat", key=f"clear_{scheme['id']}"):
-                st.session_state[hist_key] = []
-                st.rerun()
+    q = st.text_input("Type your question…", key=f"q_{scheme['id']}", label_visibility="collapsed",
+                      placeholder="e.g. मुझे इस योजना के बारे में बताएं")
+    if st.button("Send →", key=f"send_{scheme['id']}", use_container_width=True) and q.strip():
+        st.session_state[hist_key].append({"role":"user","content":q})
+        with st.spinner("Answering…"):
+            try:
+                r = call("/ai/ask-scheme", {"scheme_id":scheme["id"],"question":q,"language":st.session_state[lang_key]})
+                st.session_state[hist_key].append({"role":"assistant","content":r.get("answer","")})
+            except Exception as e:
+                st.session_state[hist_key].append({"role":"assistant","content":str(e)})
+        st.rerun()
+
+    if st.session_state[hist_key]:
+        if st.button("Clear chat", key=f"clr_{scheme['id']}"):
+            st.session_state[hist_key] = []
+            st.rerun()
