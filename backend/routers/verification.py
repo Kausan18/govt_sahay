@@ -1,9 +1,15 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from fastapi.responses import Response
 from pydantic import BaseModel
 from config import supabase
 from db import get_profile
-from services.ocr_service import extract_text_from_image, verify_aadhar, verify_income_cert, verify_caste_cert
+from services.ocr_service import (
+    extract_text_from_image,
+    verify_aadhar,
+    verify_income_cert,
+    verify_caste_cert,
+    verify_face_match
+)
 from services.pdf_generator import generate_application_guide
 
 router = APIRouter()
@@ -82,3 +88,36 @@ async def run_verification(req: VerifyRequest):
         "issues": all_issues,
         "doc_results": results
     }
+
+
+@router.post("/verify-face")
+async def verify_face(
+    user_id: str = Form(...),
+    live_photo: UploadFile = File(...)
+):
+    """Compare live webcam photo against stored profile photo."""
+    doc_res = supabase.table("documents").select("storage_path") \
+        .eq("user_id", user_id).eq("doc_type", "profile_photo").execute()
+
+    if not doc_res.data:
+        return {
+            "passed": False,
+            "confidence": 0,
+            "issues": ["No profile photo found. Please upload a profile photo in your profile page."],
+            "skipped": True
+        }
+
+    profile_path = doc_res.data[0]["storage_path"]
+    try:
+        profile_photo_bytes = supabase.storage.from_("locker").download(profile_path)
+    except Exception as e:
+        return {
+            "passed": False,
+            "confidence": 0,
+            "issues": [f"Could not retrieve profile photo: {e}"],
+            "skipped": True
+        }
+
+    live_photo_bytes = await live_photo.read()
+    result = verify_face_match(profile_photo_bytes, live_photo_bytes)
+    return result
