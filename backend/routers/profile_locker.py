@@ -1,14 +1,13 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from pydantic import BaseModel
-from typing import Optional, List
-import os
+from typing import Optional
+import os, re
 from config import supabase
 from db import get_or_create_user, save_profile, get_profile, save_document_metadata
 import uuid
 
 router = APIRouter()
 
-# Request Models
 class LoginRequest(BaseModel):
     email: str
 
@@ -22,12 +21,8 @@ class ProfileRequest(BaseModel):
     income: int
     state: str
     gender: str
+    aadhaar_number: Optional[str] = None  # NEW
 
-class DocumentUploadRequest(BaseModel):
-    user_id: str
-    doc_type: str  # 'aadhar', 'income', 'caste', 'dob', 'basic'
-
-# 1. Simple Login - Create or fetch user
 @router.post("/simple-login")
 def simple_login(req: LoginRequest):
     try:
@@ -36,10 +31,19 @@ def simple_login(req: LoginRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# 2. Save/Update Profile
 @router.post("/save-profile")
 def save_user_profile(req: ProfileRequest):
     try:
+        # Validate aadhaar format if provided
+        if req.aadhaar_number:
+            clean = re.sub(r'\s|-', '', req.aadhaar_number)
+            if not re.fullmatch(r'\d{12}', clean):
+                raise HTTPException(status_code=400, detail="Aadhaar number must be exactly 12 digits")
+            # Store masked (show only last 4)
+            aadhaar_to_store = clean  # store full for verification, masked for display
+        else:
+            aadhaar_to_store = None
+
         data = {
             "name": req.name,
             "caste": req.caste,
@@ -48,14 +52,16 @@ def save_user_profile(req: ProfileRequest):
             "religion": req.religion,
             "income": req.income,
             "state": req.state,
-            "gender": req.gender
+            "gender": req.gender,
+            "aadhaar_number": aadhaar_to_store,
         }
         save_profile(req.user_id, data)
         return {"status": "success", "message": "Profile saved successfully"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# 3. Get Profile
 @router.get("/get-profile")
 def get_user_profile(user_id: str):
     try:
@@ -64,7 +70,6 @@ def get_user_profile(user_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# 4. Upload Document to Supabase Storage
 @router.post("/upload-document")
 async def upload_document(
     user_id: str = Form(...),
@@ -72,43 +77,21 @@ async def upload_document(
     file: UploadFile = File(...)
 ):
     try:
-        # Validate file type
         allowed_types = ["application/pdf", "image/jpeg", "image/jpg", "image/png"]
         if file.content_type not in allowed_types:
             raise HTTPException(status_code=400, detail="Only PDF and images allowed")
-        
-        # Generate unique filename
         file_extension = file.filename.split(".")[-1]
         unique_filename = f"{uuid.uuid4()}.{file_extension}"
         storage_path = f"{user_id}/{doc_type}/{unique_filename}"
-        
-        # Read file content
         file_content = await file.read()
-        
-        # Upload to Supabase Storage
         supabase.storage.from_("locker").upload(storage_path, file_content, {"content-type": file.content_type})
-        
-        # Save metadata to database
         save_document_metadata(user_id, doc_type, storage_path)
-        
-        return {
-            "status": "success",
-            "message": "Document uploaded successfully",
-            "storage_path": storage_path
-        }
+        return {"status": "success", "message": "Document uploaded successfully", "storage_path": storage_path}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# 5. Get User's Documents
-'''
-@router.post("/get-documents")
-def get_user_documents(user_id: str):
-    try:
-        res = supabase.table("documents").select("*").eq("user_id", user_id).execute()
-        return {"documents": res.data}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-'''
 @router.get("/get-documents")
 def get_user_documents(user_id: str):
     try:
