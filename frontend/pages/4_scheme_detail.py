@@ -185,7 +185,7 @@ with col_info:
     btn_label = "Verify & apply →" if has_all else "Verify with available documents →"
     if st.button(btn_label, use_container_width=True):
         st.session_state["verify_scheme_id"] = scheme["id"]
-        st.switch_page("pages/5_verification.py")
+        st.switch_page("pages/5b_face_verify.py")
     st.markdown('</div>', unsafe_allow_html=True)
 
     if scheme.get("official_url"):

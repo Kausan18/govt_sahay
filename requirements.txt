@@ -13,3 +13,8 @@ fuzzywuzzy
 python-Levenshtein
 reportlab
 easyocr
+deepface==0.0.93
+opencv-python==4.10.0.84
+tf-keras
+streamlit-webrtc==0.47.6
+av==12.0.0

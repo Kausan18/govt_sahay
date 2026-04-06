@@ -105,6 +105,34 @@ missing = result.get("missing_docs", [])
 issues = result.get("issues", [])
 doc_results = result.get("doc_results", {})
 
+
+# Face verification status banner
+face_verified = st.session_state.get("face_verified", None)
+if face_verified is True:
+    st.markdown("""
+    <div style="background:#E8F7E8;border:1.5px solid #138808;border-radius:14px;
+         padding:14px 20px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
+        <span style="font-size:1.3rem">🧑</span>
+        <div>
+            <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:0.84rem;
+                 font-weight:600;color:#0B6E04">Face verification passed</div>
+            <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:0.78rem;
+                 color:#1D8A14">Live photo matched your profile photo successfully</div>
+        </div>
+    </div>""", unsafe_allow_html=True)
+elif face_verified is False:
+    st.markdown("""
+    <div style="background:#FFF8EE;border:1.5px solid #FF9933;border-radius:14px;
+         padding:14px 20px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
+        <span style="font-size:1.3rem">⚠️</span>
+        <div>
+            <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:0.84rem;
+                 font-weight:600;color:#8B5E1A">Face verification skipped or failed</div>
+            <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:0.78rem;
+                 color:#8B5E1A">Document verification still proceeded — consider retrying face check</div>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
 # Result card
 if verified:
     st.markdown("""
